@@ -1,8 +1,11 @@
-# encoding: utf-8
-
 module Backup
   module Encryptor
     class OpenSSL < Base
+      BASE_OPTIONS = [
+        "aes-256-cbc",
+        "-pbkdf2",
+        "-iter", "310000" # As per OWASP "Password Storage Cheat Sheet"
+      ].freeze
 
       ##
       # The password that'll be used to encrypt the backup. This
@@ -19,6 +22,7 @@ module Backup
 
       ##
       # Determines whether the 'salt' flag should be used
+      # *DEPRECATED*: This is the default behavior, this flag is useless
       attr_accessor :salt
 
       ##
@@ -42,7 +46,7 @@ module Backup
       # so that any clean-up may be performed after the yield.
       def encrypt_with
         log!
-        yield "#{ utility(:openssl) } #{ options }", '.enc'
+        yield "#{utility(:openssl)} #{options}", ".enc"
       end
 
       private
@@ -54,24 +58,21 @@ module Backup
       # The -base64 option will make the encrypted output base64 encoded,
       # this makes the encrypted file readable using text editors
       #
-      # The -salt option adds strength to the encryption
-      #
       # Always sets a password option, if even no password is given,
       # but will prefer the password_file option if both are given.
       def options
-        opts = ['aes-256-cbc']
-        opts << '-base64' if @base64
-        opts << '-salt'   if @salt
+        opts = BASE_OPTIONS.dup
+        opts << "-base64" if @base64
 
-        if @password_file.to_s.empty?
-          opts << "-k #{Shellwords.escape(@password)}"
-        else
-          opts << "-pass file:#{@password_file}"
-        end
+        opts <<
+          if @password_file.to_s.empty?
+            "-k #{Shellwords.escape(@password)}"
+          else
+            "-pass file:#{@password_file}"
+          end
 
-        opts.join(' ')
+        opts.join(" ")
       end
-
     end
   end
 end

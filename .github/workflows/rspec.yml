@@ -1,0 +1,38 @@
+name: tests
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rspec:
+    name: RSpec (Ruby ${{ matrix.ruby }}, shard ${{ matrix.shard }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["4.0.6"]
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[0, 1, 2, 3]' || '[0]') }}
+    env:
+      BUNDLE_WITHOUT: no_ci
+      NUMBER_OF_NODES: ${{ github.event_name == 'pull_request' && 4 || 1 }}
+      CI_NODE_INDEX: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -qf libcurl4-openssl-dev
+      - name: Install ruby
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Run specs
+        run: ruby .github/scripts/run_specs.rb

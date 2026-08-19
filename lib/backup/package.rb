@@ -1,8 +1,5 @@
-# encoding: utf-8
-
 module Backup
   class Package
-
     ##
     # The time when the backup initiated (in format: 2011.02.20.03.29.59)
     attr_accessor :time
@@ -29,27 +26,27 @@ module Backup
 
     def initialize(model)
       @trigger = model.trigger
-      @extension = 'tar'
-      @chunk_suffixes = Array.new
+      @extension = "tar"
+      @chunk_suffixes = []
       @no_cycle = false
       @version = VERSION
     end
 
     def filenames
-      if chunk_suffixes.empty?
-        [basename]
-      else
-        chunk_suffixes.map {|suffix| "#{ basename }-#{ suffix }" }
-      end
+      filenames = if chunk_suffixes.empty?
+                    [basename]
+                  else
+                    chunk_suffixes.map { |suffix| "#{basename}-#{suffix}" }
+                  end
+      filenames.map { |filename| Path.component(filename, "Package Filename") }
     end
 
     def basename
-      "#{ trigger }.#{ extension }"
+      Path.component("#{trigger}.#{extension}", "Package Filename")
     end
 
     def time_as_object
-      Time.strptime(time, '%Y.%m.%d.%H.%M.%S')
+      Time.strptime(time, "%Y.%m.%d.%H.%M.%S")
     end
-
   end
 end
